@@ -14,10 +14,12 @@ const elmia3d = (function() {
   loadedClients = [],
   arenablock,
   options = {},
-  animatedblocks = [];
+  animatedblocks = [],
+  lastMove = Date.now(),
+  running = true;
 
-  const scaleFactor = 4;
-
+  const scaleFactor = 4,
+  standbyAfter = 4000;
 
   const init = function(userOptions){
     options = userOptions;
@@ -29,6 +31,9 @@ const elmia3d = (function() {
       options.container = options.container.replace(".", "");
       options.container = document.getElementsByClassName(options.container)[0];
     }
+
+    window.addEventListener("mousedown", requestRender, false);
+    window.addEventListener("mouseup", function(){running = false}, false);
 
     setUp3D();
   };
@@ -168,7 +173,6 @@ const elmia3d = (function() {
         addShape( shape, obj.BlockId);
 
     }
-    render();
   };
 
   const addShape = function(shape, _id){
@@ -208,19 +212,30 @@ const elmia3d = (function() {
     return block;
   }
 
+  const requestRender = function() {
+    lastMove = Date.now();
+    if ( !running) {
+      running = true;
+      requestAnimationFrame(animate);
+    }
+  }
+
   const animate = function(){
-    requestAnimationFrame( function(){
-      animate();
-    } );
+
+    console.log(running);
 
     TWEEN.update();
+    renderer.render( scene, camera );
     controls.update();
 
-    render();
-  };
-
-  const render = function() {
-    renderer.render( scene, camera );
+    if (lastMove + standbyAfter < Date.now() || !running) {
+      running = false;
+    } else {
+      running = true;
+      requestAnimationFrame( function(){
+        animate();
+      } );
+    }
   };
 
   const changeArena = function(arena){
@@ -230,15 +245,16 @@ const elmia3d = (function() {
       group.remove( blocks[0].obj );
       blocks.splice(0, 1);
     }
-    render();
 
     options.arena = arena;
     drawArena();
     drawClients();
+
+    animate();
   };
 
-
   const showBlocksById = function(arr, color){
+    requestRender();
 
     for(let reverseBlock of animatedblocks){
         if(arr.indexOf(reverseBlock.id) < 0){
@@ -257,8 +273,6 @@ const elmia3d = (function() {
       }
     }
   };
-
-/* */
 
   const animateBlock = function(block, color, position, scale, time = 500){
     const delay = Math.random()*1000;
@@ -290,6 +304,7 @@ const elmia3d = (function() {
     new TWEEN.Tween( block.obj.scale ).to( { z: scale }, time ).easing(
         TWEEN.Easing.Cubic.Out ).delay(delay).start();
   }
+
   return {
     init : init,
     showBlocksById : showBlocksById
