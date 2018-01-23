@@ -33,8 +33,12 @@
       });
 
       setTimeout(function(){
-          elmia3d.showBlocksById(["630685", "630690", "630684"]);
+          elmia3d.showBlocksById(["630685", "630690","630684"], {r : 0, g : 1, b : 0.5});
       }, 3000);
+
+      setTimeout(function(){
+          elmia3d.showBlocksById(["630685"], {r : 1, g : 0.8, b : 0});
+      }, 6000);
 
     </script>
 

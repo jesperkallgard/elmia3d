@@ -13,7 +13,8 @@ const elmia3d = (function() {
   loadedArenas = [],
   loadedClients = [],
   arenablock,
-  options = {};
+  options = {},
+  animatedblocks = [];
 
   const scaleFactor = 4;
 
@@ -172,13 +173,13 @@ const elmia3d = (function() {
 
   const addShape = function(shape, _id){
     const geometry = new THREE.ExtrudeGeometry( shape, { amount: 20, bevelEnabled: false, bevelSegments: 0.5, steps: 1, bevelSize: 1, bevelThickness: 1 } );
-    const material = new THREE.MeshDepthMaterial( {
-      transparent: true,
-      opacity: 1,
-      polygonOffset: true,
-      polygonOffsetFactor: 1, // positive value pushes polygon further away
-      polygonOffsetUnits: 1
+    const material = new THREE.LineBasicMaterial( {
+    	color: 0xffffff,
+    	linewidth: 1,
+    	linecap: 'round', //ignored by WebGLRenderer
+    	linejoin:  'round' //ignored by WebGLRenderer
     } );
+
     const mesh = new THREE.Mesh( geometry,  material );
 
     mesh.position.set( 0, 0, -20 );
@@ -236,19 +237,59 @@ const elmia3d = (function() {
     drawClients();
   };
 
-  const showBlocksById = function(arr){
+
+  const showBlocksById = function(arr, color){
+
+    for(let reverseBlock of animatedblocks){
+        if(arr.indexOf(reverseBlock.id) < 0){
+          animateBlock(reverseBlock, {r : 1, g : 1, b : 1}, -20, 1);
+        }
+    }
+
+    animatedblocks = [];
+
     for(let _id of arr){
       let block = getBlockById(_id);
 
       if(block){
-        new TWEEN.Tween( block.obj.position ).to( { z: -40 }, 500 ).easing(
-     TWEEN.Easing.Cubic.Out ).start();
-        new TWEEN.Tween( block.obj.scale ).to( { z: 2 }, 500 ).easing(
-     TWEEN.Easing.Cubic.Out ).start();
+        animateBlock(block, color, -40, 2);
+        animatedblocks.push(block);
       }
     }
   };
 
+/* */
+
+  const animateBlock = function(block, color, position, scale, time = 500){
+    const delay = Math.random()*1000;
+
+    new TWEEN.Tween(
+      {
+        r: block.obj.material.color.r,
+        g: block.obj.material.color.g,
+        b: block.obj.material.color.b
+      }
+    )
+    .to(
+      {
+        r : color.r,
+        g : color.g,
+        b : color.b
+      },
+      time)
+    .onUpdate(function(){
+      block.obj.material.color.r = this.r;
+      block.obj.material.color.g = this.g;
+      block.obj.material.color.b = this.b;
+    })
+    .delay(delay)
+    .start();
+
+    new TWEEN.Tween( block.obj.position ).to( { z: position }, time ).easing(
+        TWEEN.Easing.Cubic.Out ).delay(delay).start();
+    new TWEEN.Tween( block.obj.scale ).to( { z: scale }, time ).easing(
+        TWEEN.Easing.Cubic.Out ).delay(delay).start();
+  }
   return {
     init : init,
     showBlocksById : showBlocksById
