@@ -21,6 +21,7 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/88/three.min.js"></script>
     <script src="https://threejs.org/examples/js/controls/OrbitControls.js" ></script>
+    <script src="https://threejs.org/examples/js/loaders/OBJLoader.js" ></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/16.3.5/Tween.min.js"></script>
 
     <script src="elmia3d.js"></script>
@@ -29,16 +30,14 @@
 
       elmia3d.init({
         container : '#map',
-        arena : 'A' //Ange vilken hall som ska laddas;
+        arena : 'D' //Ange vilken hall som ska laddas;
       });
 
       setTimeout(function(){
-          elmia3d.showBlocksById(["630685", "630690","630684"], {r : 0, g : 1, b : 0.5});
+          //elmia3d.showBlocksById(["630685", "630690","630684"], {r : 0, g : 1, b : 0.5});
+          //elmia3d.changeArena('D');
       }, 3000);
 
-      setTimeout(function(){
-          elmia3d.showBlocksById(["630685"], {r : 1, g : 0.8, b : 0});
-      }, 6000);
 
     </script>
 

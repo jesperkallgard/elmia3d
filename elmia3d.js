@@ -12,14 +12,64 @@ const elmia3d = (function() {
   loadprocess = 0,
   loadedArenas = [],
   loadedClients = [],
-  arenablock,
+  arenablocks = [],
   options = {},
   animatedblocks = [],
   lastMove = Date.now(),
   running = true;
 
-  const scaleFactor = 4,
-  standbyAfter = 4000;
+  const scaleFactor = 1,
+  standbyAfter = 5000,
+  hallSetup = {
+    'all' : {
+      bevelAmount : 10,
+      camera : {
+        x : -50,
+        y : 200,
+        z : 400
+      },
+      centerAdjust : 30
+    },
+    'A' : {
+      bevelAmount : 10,
+      camera : {
+        x : 0,
+        y : 105,
+        z : 170
+      },
+      centerAdjust : 0
+    },
+    'B' : {
+      bevelAmount : 10,
+      camera : {
+        x : 166,
+        y : 173,
+        z : 0
+      },
+      centerAdjust : 0
+    },
+    'C' : {
+      bevelAmount : 10,
+      camera : {
+        x : -50,
+        y : 100,
+        z : -110
+      },
+      centerAdjust : 0
+    },
+    'D' : {
+      bevelAmount : 10,
+      camera : {
+        x : -130,
+        y : 112,
+        z : 0
+      },
+      centerAdjust : 0
+    },
+    'E' : {
+      bevelAmount : 10
+    }
+  }
 
   const init = function(userOptions){
     options = userOptions;
@@ -42,9 +92,9 @@ const elmia3d = (function() {
     //Create scene
     scene = new THREE.Scene();
     scene.background = new THREE.Color( 0x458EA8 );
-    //Create camera
+  
+
     camera = new THREE.PerspectiveCamera( 45, options.container.offsetWidth / options.container.offsetHeight, 1, 1000 );
-    camera.position.set( 0, 300, 600 );
     scene.add( camera );
 
     //Create renderer
@@ -78,6 +128,9 @@ const elmia3d = (function() {
       processClients(JSON.parse(response).StandCordinates);
     }, "data-17130.json");
 
+    var axesHelper = new THREE.AxesHelper( 5 );
+    scene.add( axesHelper );
+
     animate();
 
   };
@@ -94,47 +147,58 @@ const elmia3d = (function() {
      xobj.send(null);
   };
 
+
   const processClients = function(data){
+
     for (let obj of data) {
       if(!loadedClients[obj.HallName]) loadedClients[obj.HallName] = [];
       loadedClients[obj.HallName].push(obj);
     }
 
-    addToQue();
+    queAndRender();
   };
 
   const processArenas = function(data){
     for (let obj of data) {
-      loadedArenas[obj.HallName] = [];
-      loadedArenas[obj.HallName].p = obj.Points["d3p1:string"];
-      loadedArenas[obj.HallName].c = obj.Center.split(", ");
+      if(obj.HallName === 'A' || obj.HallName === 'B' || obj.HallName === 'C' || obj.HallName === 'D' || obj.HallName === 'LN'){
+        loadedArenas[obj.HallName] = [];
+        loadedArenas[obj.HallName].p = obj.Points["d3p1:string"];
+        loadedArenas[obj.HallName].c = obj.Center.split(", ");
+      }
     }
 
-    addToQue();
+    queAndRender();
   };
 
-  const addToQue = function(){
-    loadprocess++;
-
-    if(loadprocess == 2){
-      drawArena();
-      drawClients();
+  const queAndRender = function(){
+    if(loadprocess){
+      
+      if(options.arena == 'all'){
+        for(let hall in loadedArenas){
+          drawArena(hall);
+          drawClients(hall);
+        }
+      }else{
+        drawArena(options.arena);
+        drawClients(options.arena);
+      }
+      centerObject();
+      requestRender();
+    }else{
+      loadprocess++;
     }
   };
 
-  const drawArena = function(data){
-    const shape = new THREE.Shape(),
-    points = loadedArenas[options.arena].p,
+  const drawArena = function(hall){
+    const shape = new THREE.Shape();
+    const points = loadedArenas[hall].p,
     startVal = points[points.length - 1].split(", ");
 
-    adjustX = (loadedArenas[options.arena].c[0] * scaleFactor);
-    adjustY = (loadedArenas[options.arena].c[1] * scaleFactor);
-
-    shape.moveTo((parseInt(startVal[0]) * scaleFactor)-adjustX , (parseInt(startVal[1]) * scaleFactor)-adjustY);
+    shape.moveTo((parseInt(startVal[0])) , (parseInt(startVal[1])));
 
     for(let point of points){
       var pointVal = point.split(", ");
-      shape.lineTo( (parseInt(pointVal[0]) * scaleFactor) - adjustX, (parseInt(pointVal[1]) * scaleFactor) - adjustY );
+      shape.lineTo( (parseInt(pointVal[0])), (parseInt(pointVal[1])) );
     }
 
     const geometry = new THREE.ExtrudeGeometry( shape, { amount: 5, bevelEnabled: false, bevelSegments: 0, steps: 1, bevelSize: 1, bevelThickness: 1 } ),
@@ -152,31 +216,34 @@ const elmia3d = (function() {
     arena.castShadow = false;
     arena.receiveShadow = false;
 
-    arenablock = arena;
+    arenablocks.push(arena);
 
     group.add(arena);
+
   };
 
-  const drawClients = function(){
-    for(let obj of loadedClients[options.arena]){
+  const drawClients = function(hall){
+    if(!loadedClients[hall]) return false;
+
+    for(let obj of loadedClients[hall]){
         const shape = new THREE.Shape();
         const points = obj.Points.string;
         const startVal = points[points.length - 1].split(", ");
 
-        shape.moveTo((parseInt(startVal[0]) * scaleFactor) - adjustX , (parseInt(startVal[1]) * scaleFactor) - adjustY );
+        shape.moveTo((parseInt(startVal[0])) , (parseInt(startVal[1])) );
 
         for(let point of points){
           var pointVal = point.split(", ");
-          shape.lineTo( (parseInt(pointVal[0]) * scaleFactor) - adjustX , (parseInt(pointVal[1]) * scaleFactor) - adjustY );
+          shape.lineTo( (parseInt(pointVal[0])) , (parseInt(pointVal[1])) );
         }
 
-        addShape( shape, obj.BlockId);
-
+        addExhibitor( shape, obj.BlockId);
     }
+    
   };
 
-  const addShape = function(shape, _id){
-    const geometry = new THREE.ExtrudeGeometry( shape, { amount: 20, bevelEnabled: false, bevelSegments: 0.5, steps: 1, bevelSize: 1, bevelThickness: 1 } );
+  const addExhibitor = function(shape, _id){
+    const geometry = new THREE.ExtrudeGeometry( shape, { amount: hallSetup[options.arena].bevelAmount, bevelEnabled: false, bevelSegments: 0.5, steps: 1, bevelSize: 1, bevelThickness: 1 } );
     const material = new THREE.LineBasicMaterial( {
     	color: 0xffffff,
     	linewidth: 1,
@@ -186,7 +253,7 @@ const elmia3d = (function() {
 
     const mesh = new THREE.Mesh( geometry,  material );
 
-    mesh.position.set( 0, 0, -20 );
+    mesh.position.set( 0, 0, -hallSetup[options.arena].bevelAmount );
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     mesh.name = _id;
@@ -197,7 +264,53 @@ const elmia3d = (function() {
     });
     group.add( mesh );
 
-    mesh.add( new THREE.LineSegments( new THREE.EdgesGeometry( mesh.geometry ), new THREE.LineBasicMaterial( { color: 0x0C2333, linewidth: 2 } )));
+    mesh.add( new THREE.LineSegments( new THREE.EdgesGeometry( mesh.geometry ), new THREE.LineBasicMaterial( { color: 0x0C2333, linewidth: 1 } )));
+  };
+
+  const centerObject = function(){
+    var box = new THREE.Box3().setFromObject( group ).getCenter( group.position ).multiplyScalar( - 1 );
+    camera.position.set( hallSetup[options.arena].camera.x, hallSetup[options.arena].camera.y, hallSetup[options.arena].camera.z );
+    group.position.x -= hallSetup[options.arena].centerAdjust;
+  }
+
+  const drawArrows = function(){
+    const shape = new THREE.Shape();
+    const points = [
+      [-1, 1],
+      [0, 0],
+      [1, 1],
+      [.5, 1],
+      [.5, 2],
+      [-.5, 2],
+      [-.5, 1]
+    ];
+
+    let count = 0;
+    const localScale = 6;
+
+    for(let point of points){
+      let x = (point[0] * localScale) * scaleFactor;
+      let y = (point[1] * localScale) * scaleFactor;
+
+      x += (0 * scaleFactor);
+      y += (55 * scaleFactor);
+
+      if(count == 0) shape.moveTo( x, y );
+      else shape.lineTo( x, y  );
+      count++;
+    }
+
+    const geometry = new THREE.ExtrudeGeometry( shape, { amount: 5, bevelEnabled: false, bevelSegments: 0.5, steps: 1, bevelSize: 1, bevelThickness: 1 } );
+    const material = new THREE.LineBasicMaterial( {
+    	color: 0xffffff,
+    	linewidth: 1,
+    	linecap: 'round', //ignored by WebGLRenderer
+    	linejoin:  'round' //ignored by WebGLRenderer
+    } );
+
+    const mesh = new THREE.Mesh( geometry,  material );
+
+    group.add(mesh);
   };
 
   const getBlockById = function(_id){
@@ -221,9 +334,6 @@ const elmia3d = (function() {
   }
 
   const animate = function(){
-
-    console.log(running);
-
     TWEEN.update();
     renderer.render( scene, camera );
     controls.update();
@@ -238,19 +348,17 @@ const elmia3d = (function() {
     }
   };
 
-  const changeArena = function(arena){
-    group.remove(arenablock);
+  const changeArena = function(showhall){
 
-    while(blocks.length > 0){
-      group.remove( blocks[0].obj );
-      blocks.splice(0, 1);
+    while(group.children.length > 0){
+      group.remove(group.children[0]);
     }
+  
+    group.position.x = 0;
+    group.position.z = 0;
 
-    options.arena = arena;
-    drawArena();
-    drawClients();
-
-    animate();
+    options.arena = showhall;
+    queAndRender();
   };
 
   const showBlocksById = function(arr, color){
@@ -267,7 +375,7 @@ const elmia3d = (function() {
     for(let _id of arr){
       let block = getBlockById(_id);
 
-      if(block){
+      if(block){  
         animateBlock(block, color, -40, 2);
         animatedblocks.push(block);
       }
@@ -307,6 +415,7 @@ const elmia3d = (function() {
 
   return {
     init : init,
-    showBlocksById : showBlocksById
+    showBlocksById : showBlocksById,
+    changeArena : changeArena
   };
 })();
